@@ -12,6 +12,12 @@ type Params = models.Params
 type OpenApiRequest = models.OpenApiRequest
 ")
 
+@python("from .utils_models import GlobalParameters
+from .utils_models import Config
+from .utils_models import Params
+from .utils_models import OpenApiRequest
+")
+
 type @endpoint = string
 type @regionId = string
 type @protocol = string
@@ -293,9 +299,9 @@ api doRPCRequest(action: string, version: string, protocol: string, method: stri
       statusCode = __response.statusCode
     };
   } else if (bodyType == 'string') {
-    var str = $Stream.readAsString(__response.body);
+    var resStr = $Stream.readAsString(__response.body);
     return {
-      body = str,
+      body = resStr,
       headers = __response.headers,
       statusCode = __response.statusCode
     };
@@ -490,9 +496,9 @@ api doROARequest(action: string, version: string, protocol: string, method: stri
       statusCode = __response.statusCode
     };
   } else if (bodyType == 'string') {
-    var str = $Stream.readAsString(__response.body);
+    var resStr = $Stream.readAsString(__response.body);
     return {
-      body = str,
+      body = resStr,
       headers = __response.headers,
       statusCode = __response.statusCode
     };
@@ -685,9 +691,9 @@ api doROARequestWithForm(action: string, version: string, protocol: string, meth
       statusCode = __response.statusCode
     };
   } else if (bodyType == 'string') {
-    var str = $Stream.readAsString(__response.body);
+    var resStr = $Stream.readAsString(__response.body);
     return {
-      body = str,
+      body = resStr,
       headers = __response.headers,
       statusCode = __response.statusCode
     };
@@ -928,9 +934,9 @@ api doRequest(params: OpenApiUtil.Params, request: OpenApiUtil.OpenApiRequest, r
       statusCode = __response.statusCode
     };
   } else if (params.bodyType == 'string') {
-    var str = $Stream.readAsString(__response.body);
+    var resStr = $Stream.readAsString(__response.body);
     return {
-      body = str,
+      body = resStr,
       headers = __response.headers,
       statusCode = __response.statusCode
     };
