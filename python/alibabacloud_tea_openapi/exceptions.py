@@ -28,7 +28,7 @@ class AlibabaCloudException(ResponseException):
         self.description = description
         self.request_id = request_id
 
-class ClientException(AlibabaCloud):
+class ClientException(AlibabaCloudException):
     def __init__(
         self, 
         status_code: int = None,
@@ -53,7 +53,7 @@ class ClientException(AlibabaCloud):
         )
         self.access_denied_detail = access_denied_detail
 
-class ServerException(AlibabaCloud):
+class ServerException(AlibabaCloudException):
     def __init__(
         self, 
         status_code: int = None,
@@ -76,7 +76,7 @@ class ServerException(AlibabaCloud):
             stack,
         )
 
-class ThrottlingException(AlibabaCloud):
+class ThrottlingException(AlibabaCloudException):
     def __init__(
         self, 
         status_code: int = None,

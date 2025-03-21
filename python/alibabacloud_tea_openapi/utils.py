@@ -26,6 +26,8 @@ from datetime import datetime
 from typing import Any, Dict, List
 from .sm3 import hash_sm3, Sm3
 
+_process_start_time = int(time.time() * 1000)
+_seqId = 0
 
 def to_str(val):
     if val is None:
@@ -98,7 +100,7 @@ def get_canonicalized_headers(headers):
     return canonical_headers, ';'.join(canon_keys)
 
 
-class Client(object):
+class Utils(object):
     """
     This is for OpenApi Util
     """
@@ -114,7 +116,7 @@ class Client(object):
 
         @return: void
         """
-        body_map = Client._except_stream(body.to_map())
+        body_map = Utils._except_stream(body.to_map())
         content.from_map(body_map)
 
     @staticmethod
@@ -122,17 +124,17 @@ class Client(object):
         if isinstance(val, dict):
             result = {}
             for k, v in val.items():
-                result[k] = Client._except_stream(v)
+                result[k] = Utils._except_stream(v)
             return result
         elif isinstance(val, list):
             result = []
             for i in val:
                 if i is not None:
-                    item = Client._except_stream(i)
+                    item = Utils._except_stream(i)
                     if item is not None:
                         result.append(item)
                 else:
-                    result.append(Client._except_stream(i))
+                    result.append(Utils._except_stream(i))
             return result
         elif isinstance(val, STREAM_CLASS):
             return None
@@ -182,8 +184,8 @@ class Client(object):
         date = '' if headers.get('date') is None else headers.get('date')
 
         header = '%s\n%s\n%s\n%s\n%s\n' % (method, accept, content_md5, content_type, date)
-        canon_headers = Client._get_canonicalized_headers(headers)
-        canon_resource = Client._get_canonicalized_resource(pathname, query)
+        canon_headers = Utils._get_canonicalized_headers(headers)
+        canon_resource = Utils._get_canonicalized_resource(pathname, query)
         sign_str = header + canon_headers + canon_resource
         return sign_str
 
@@ -211,13 +213,13 @@ class Client(object):
 
         if isinstance(value, dict):
             for k, v in value.items():
-                Client._object_handler('%s.%s' % (key, k), v, out)
+                Utils._object_handler('%s.%s' % (key, k), v, out)
         elif isinstance(value, DaraModel):
             for k, v in value.to_map().items():
-                Client._object_handler('%s.%s' % (key, k), v, out)
+                Utils._object_handler('%s.%s' % (key, k), v, out)
         elif isinstance(value, (list, tuple)):
             for index, val in enumerate(value):
-                Client._object_handler('%s.%s' % (key, index + 1), val, out)
+                Utils._object_handler('%s.%s' % (key, index + 1), val, out)
         else:
             if key.startswith('.'):
                 key = key[1:]
@@ -238,7 +240,7 @@ class Client(object):
         """
         result = {}
         if filter:
-            Client._object_handler('', filter, result)
+            Utils._object_handler('', filter, result)
         return Util.to_form_string(
             Util.anyify_map_value(result)
         )
@@ -250,7 +252,7 @@ class Client(object):
 
         @return: the timestamp string
         """
-        return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @staticmethod
     def query(filter):
@@ -264,7 +266,7 @@ class Client(object):
         """
         out_dict = {}
         if filter:
-            Client._object_handler('', filter, out_dict)
+            Utils._object_handler('', filter, out_dict)
         return out_dict
 
     @staticmethod
@@ -323,7 +325,7 @@ class Client(object):
             return ''
 
         if style == 'repeatList':
-            return Client._flat_repeat_list({prefix: array})
+            return Utils._flat_repeat_list({prefix: array})
         elif style == 'simple':
             return ','.join(map(str, array))
         elif style == 'spaceDelimited':
@@ -331,7 +333,7 @@ class Client(object):
         elif style == 'pipeDelimited':
             return '|'.join(map(str, array))
         elif style == 'json':
-            return Util.to_jsonstring(Client._parse_to_dict(array))
+            return Util.to_jsonstring(Utils._parse_to_dict(array))
         else:
             return ''
 
@@ -339,7 +341,7 @@ class Client(object):
     def _flat_repeat_list(dic):
         query = {}
         if dic:
-            Client._object_handler('', dic, query)
+            Utils._object_handler('', dic, query)
 
         l = []
         q = sorted(query)
@@ -355,7 +357,7 @@ class Client(object):
         Transform input as map.
         """
         try:
-            result = Client._parse_to_dict(inp)
+            result = Utils._parse_to_dict(inp)
             return copy.deepcopy(result)
         except TypeError:
             return
@@ -366,7 +368,7 @@ class Client(object):
             result = {}
             for k, v in val.items():
                 if isinstance(v, (list, dict, DaraModel)):
-                    result[k] = Client._parse_to_dict(v)
+                    result[k] = Utils._parse_to_dict(v)
                 else:
                     result[k] = v
             return result
@@ -374,7 +376,7 @@ class Client(object):
             result = []
             for i in val:
                 if isinstance(i, (list, dict, DaraModel)):
-                    result.append(Client._parse_to_dict(i))
+                    result.append(Utils._parse_to_dict(i))
                 else:
                     result.append(i)
             return result
@@ -426,8 +428,8 @@ class Client(object):
                             f'{signed_headers}\n' \
                             f'{payload}'
 
-        str_to_sign = f'{sign_type}\n{Client.hex_encode(Client.hash(canonical_request.encode("utf-8"), sign_type))}'
-        signature = Client.hex_encode(signature_method(secret, str_to_sign, sign_type))
+        str_to_sign = f'{sign_type}\n{Utils.hex_encode(Utils.hash(canonical_request.encode("utf-8"), sign_type))}'
+        signature = Utils.hex_encode(signature_method(secret, str_to_sign, sign_type))
         auth = f'{sign_type} Credential={ak},SignedHeaders={signed_headers},Signature={signature}'
         return auth
 
@@ -519,8 +521,8 @@ class Client(object):
         @return: the string value
         """
         if user_agent:
-            return f'{Client.__get_default_agent()} {user_agent}'
-        return Client.__get_default_agent()
+            return f'{Utils.__get_default_agent()} {user_agent}'
+        return Utils.__get_default_agent()
 
     @staticmethod
     def get_endpoint_rules(product, region_id, endpoint_type, network, suffix=None):
@@ -554,8 +556,8 @@ class Client(object):
         rate_limit_user_api = headers.get("x-ratelimit-user-api")
         rate_limit_user = headers.get("x-ratelimit-user")
 
-        time_left_user_api = Client._get_time_left(rate_limit_user_api)
-        time_left_user = Client._get_time_left(rate_limit_user)
+        time_left_user_api = Utils._get_time_left(rate_limit_user_api)
+        time_left_user = Utils._get_time_left(rate_limit_user)
 
         return max(time_left_user_api, time_left_user)
 
@@ -610,7 +612,7 @@ class Client(object):
         @return: A flat representation of the input
         """
         if isinstance(input, dict):
-            return Client.flat_map(input)
+            return Utils.flat_map(input)
         elif isinstance(input, list):
             flat_result = {}
             for index, item in enumerate(input):
