@@ -377,7 +377,7 @@ class Client:
             if _retries_attempted > 0:
                 _backoff_time = DaraCore.get_backoff_time(_runtime.get('retryOptions'), _context)
                 if _backoff_time > 0:
-                    DaraCore.sleep(_backoff_time)
+                    await DaraCore.sleep_async(_backoff_time)
             _retries_attempted = _retries_attempted + 1
             try:
                 _request = DaraRequest()
@@ -798,7 +798,7 @@ class Client:
             if _retries_attempted > 0:
                 _backoff_time = DaraCore.get_backoff_time(_runtime.get('retryOptions'), _context)
                 if _backoff_time > 0:
-                    DaraCore.sleep(_backoff_time)
+                    await DaraCore.sleep_async(_backoff_time)
             _retries_attempted = _retries_attempted + 1
             try:
                 _request = DaraRequest()
@@ -1207,7 +1207,7 @@ class Client:
             if _retries_attempted > 0:
                 _backoff_time = DaraCore.get_backoff_time(_runtime.get('retryOptions'), _context)
                 if _backoff_time > 0:
-                    DaraCore.sleep(_backoff_time)
+                    await DaraCore.sleep_async(_backoff_time)
             _retries_attempted = _retries_attempted + 1
             try:
                 _request = DaraRequest()
@@ -1635,7 +1635,7 @@ class Client:
             if _retries_attempted > 0:
                 _backoff_time = DaraCore.get_backoff_time(_runtime.get('retryOptions'), _context)
                 if _backoff_time > 0:
-                    DaraCore.sleep(_backoff_time)
+                    await DaraCore.sleep_async(_backoff_time)
             _retries_attempted = _retries_attempted + 1
             try:
                 _request = DaraRequest()
@@ -1999,7 +1999,7 @@ class Client:
             if _retries_attempted > 0:
                 _backoff_time = DaraCore.get_backoff_time(_runtime.get('retryOptions'), _context)
                 if _backoff_time > 0:
-                    DaraCore.sleep(_backoff_time)
+                    await DaraCore.sleep_async(_backoff_time)
             _retries_attempted = _retries_attempted + 1
             try:
                 _request = DaraRequest()
@@ -2207,32 +2207,13 @@ class Client:
                         _request.headers["Authorization"] = Utils.get_authorization(_request, signature_algorithm, hashed_request_payload.hex(), access_key_id, access_key_secret)
 
                 _last_request = _request
-                _response = DaraCore.do_action(_request, _runtime)
-                _last_response = _response
-                if (_response.status_code >= 400) and (_response.status_code < 600):
-                    err = {}
-                    if not DaraCore.is_null(_response.headers.get("content-type")) and _response.headers.get("content-type") == 'text/xml;charset=utf-8':
-                        _str = DaraStream.read_as_string(_response.body)
-                        resp_map = DaraXML.parse_xml(_str, None)
-                        err = resp_map.get("Error")
-                    else:
-                        _res = DaraStream.read_as_json(_response.body)
-                        err = _res
-
-                    err["statusCode"] = _response.status_code
-                    raise DaraException({
-                        'code': f'{err.get("Code") or err.get("code")}',
-                        'message': f'code: {_response.status_code}, {err.get("Message") or err.get("message")} request id: {err.get("RequestId") or err.get("requestId")}',
-                        'data': err,
-                        'description': f'{err.get("Description") or err.get("description")}',
-                        'accessDeniedDetail': err.get("AccessDeniedDetail") or err.get("accessDeniedDetail")
-                    })
-                events = DaraStream.read_as_sse(_response.body)
+                _response = DaraCore.do_sse_action(_request, _runtime)
+                events = DaraStream.read_as_sse(_response)
                 for event in events:
                     yield  main_models.SSEResponse(
-                        status_code = _response.status_code,
-                        headers = _response.headers,
-                        event = event
+                        status_code = event.get("statusCode"),
+                        headers = event.get("headers"),
+                        event = event.get("event"),
                     )
                 return
             except Exception as e:
@@ -2277,7 +2258,7 @@ class Client:
             if _retries_attempted > 0:
                 _backoff_time = DaraCore.get_backoff_time(_runtime.get('retryOptions'), _context)
                 if _backoff_time > 0:
-                    DaraCore.sleep(_backoff_time)
+                    await DaraCore.sleep_async(_backoff_time)
             _retries_attempted = _retries_attempted + 1
             try:
                 _request = DaraRequest()
@@ -2360,32 +2341,13 @@ class Client:
                         _request.headers["Authorization"] = Utils.get_authorization(_request, signature_algorithm, hashed_request_payload.hex(), access_key_id, access_key_secret)
 
                 _last_request = _request
-                _response = await DaraCore.async_do_action(_request, _runtime)
-                _last_response = _response
-                if (_response.status_code >= 400) and (_response.status_code < 600):
-                    err = {}
-                    if not DaraCore.is_null(_response.headers.get("content-type")) and _response.headers.get("content-type") == 'text/xml;charset=utf-8':
-                        _str = await DaraStream.read_as_string_async(_response.body)
-                        resp_map = DaraXML.parse_xml(_str, None)
-                        err = resp_map.get("Error")
-                    else:
-                        _res = await DaraStream.read_as_json_async(_response.body)
-                        err = _res
-
-                    err["statusCode"] = _response.status_code
-                    raise DaraException({
-                        'code': f'{err.get("Code") or err.get("code")}',
-                        'message': f'code: {_response.status_code}, {err.get("Message") or err.get("message")} request id: {err.get("RequestId") or err.get("requestId")}',
-                        'data': err,
-                        'description': f'{err.get("Description") or err.get("description")}',
-                        'accessDeniedDetail': err.get("AccessDeniedDetail") or err.get("accessDeniedDetail")
-                    })
-                events = await DaraStream.read_as_sse_async(_response.body)
+                _response = DaraCore.async_do_sse_action(_request, _runtime)
+                events = DaraStream.read_as_sse_async(_response)
                 async for event in events:
                     yield  main_models.SSEResponse(
-                        status_code = _response.status_code,
-                        headers = _response.headers,
-                        event = event
+                        status_code = event.get("statusCode"),
+                        headers = event.get("headers"),
+                        event = event.get("event"),
                     )
                 return
             except Exception as e:
