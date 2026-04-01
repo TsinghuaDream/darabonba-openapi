@@ -146,6 +146,8 @@ namespace OpenApi
       string _tlsMinVersion;
 
       AlibabaCloud::Gateway::Models::AttributeMap _attributeMap;
+
+      int64_t _maxIdleConns;
   };
 } // namespace AlibabaCloud
 } // namespace OpenApi
